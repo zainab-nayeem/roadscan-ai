@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>RoadScan AI — Full Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Unbounded:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════
+   DESIGN SYSTEM
+═══════════════════════════════════════════════════════ */
+:root {
+  --bg:      #05080D;
+  --s1:      #0C1017;
+  --s2:      #121820;
+  --s3:      #1A2230;
+  --s4:      #212C3D;
+  --border:  #1E2A3A;
+  --border2: #283850;
+  --text:    #D8E4F0;
+  --muted:   #4A6080;
+  --muted2:  #7A9AB8;
+  --accent:  #00D4FF;   /* cyan */
+  --green:   #00E5A0;
+  --warn:    #FFB020;
+  --danger:  #FF3D5A;
+  --purple:  #8B5CF6;
+  --fh: 'Unbounded', sans-serif;
+  --fm: 'DM Mono', monospace;
+  --r: 12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--fm);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* Grid bg */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,212,255,.018) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,212,255,.018) 1px,transparent 1px);
+  background-size:56px 56px;pointer-events:none;
+}
+
+/* Subtle radial glow top */
+body::after{
+  content:'';position:fixed;top:-200px;left:50%;transform:translateX(-50%);
+  width:800px;height:400px;
+  background:radial-gradient(ellipse,rgba(0,212,255,.06) 0%,transparent 70%);
+  pointer-events:none;z-index:0;
+}
+
+.app{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+
+/* ═══ SIDEBAR ═══════════════════════════════════════════ */
+.sidebar{
+  width:220px;flex-shrink:0;
+  background:var(--s1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  padding:24px 0;
+  transition:width .3s;
+  position:relative;z-index:10;
+}
+.logo{
+  padding:0 20px 28px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:20px;
+}
+.logo-mark{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--green));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;margin-bottom:10px;
+  box-shadow:0 0 20px rgba(0,212,255,.3);
+}
+.logo-text{font-family:var(--fh);font-size:13px;font-weight:900;letter-spacing:-0.5px;line-height:1.2}
+.logo-text span{color:var(--accent)}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px}
+
+.nav{flex:1;display:flex;flex-direction:column;gap:4px;padding:0 12px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:9px;
+  cursor:pointer;transition:all .2s;
+  font-size:12px;color:var(--muted2);
+  border:1px solid transparent;
+  position:relative;
+}
+.nav-item:hover{background:var(--s2);color:var(--text)}
+.nav-item.active{
+  background:rgba(0,212,255,.08);
+  color:var(--accent);
+  border-color:rgba(0,212,255,.2);
+}
+.nav-item.active .nav-ico{color:var(--accent)}
+.nav-ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.nav-label{font-weight:500}
+.nav-badge{
+  margin-left:auto;
+  background:var(--danger);color:#fff;
+  font-size:9px;font-weight:700;
+  padding:1px 6px;border-radius:100px;
+}
+
+.sidebar-bottom{
+  padding:16px 12px 0;
+  border-top:1px solid var(--border);
+  margin-top:auto;
+}
+.model-status{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:9px;padding:12px;
+  font-size:10px;
+}
+.ms-label{color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.ms-row{display:flex;align-items:center;gap:6px;margin-top:4px}
+.ms-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;
+  animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.ms-name{color:var(--text);font-size:11px}
+
+/* ═══ MAIN ═══════════════════════════════════════════════ */
+.main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+
+/* ═══ TOPBAR ═════════════════════════════════════════════ */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 28px;border-bottom:1px solid var(--border);
+  background:var(--s1);flex-shrink:0;position:sticky;top:0;z-index:5;
+}
+.topbar-title{font-family:var(--fh);font-size:14px;font-weight:700;letter-spacing:-0.5px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--s2);border:1px solid var(--border);
+  padding:6px 12px;border-radius:100px;font-size:10px;
+}
+.chip .c-dot{width:5px;height:5px;border-radius:50%}
+.chip.live .c-dot{background:var(--green);animation:pulse 1.5s infinite}
+.chip.demo .c-dot{background:var(--warn)}
+
+/* ═══ PAGE CONTENT ═══════════════════════════════════════ */
+.page{display:none;flex:1;padding:24px 28px}
+.page.active{display:block;animation:pageIn .3s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ═══ DASHBOARD PAGE ═════════════════════════════════════ */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+  padding:20px;position:relative;overflow:hidden;transition:border-color .2s;
+}
+.stat-card:hover{border-color:var(--border2)}
+.stat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  border-radius:var(--r) var(--r) 0 0;
+}
+.stat-card.cyan::before{background:linear-gradient(90deg,var(--accent),transparent)}
+.stat-card.green::before{background:linear-gradient(90deg,var(--green),transparent)}
+.stat-card.warn::before{background:linear-gradient(90deg,var(--warn),transparent)}
+.stat-card.danger::before{background:linear-gradient(90deg,var(--danger),transparent)}
+.sc-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px}
+.sc-val{font-family:var(--fh);font-size:28px;font-weight:900;letter-spacing:-1px}
+.sc-val.cyan{color:var(--accent)}
+.sc-val.green{color:var(--green)}
+.sc-val.warn{color:var(--warn)}
+.sc-val.danger{color:var(--danger)}
+.sc-sub{font-size:10px;color:var(--muted);margin-top:4px}
+.sc-trend{position:absolute;top:16px;right:16px;font-size:11px;color:var(--green)}
+
+.charts-row{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:24px}
+.card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px}
+.card-title{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px}
+
+/* Bar chart */
+.bar-chart{display:flex;flex-direction:column;gap:12px}
+.bar-row{display:flex;align-items:center;gap:12px}
+.bar-label{width:140px;font-size:11px;color:var(--muted2);flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:8px;background:var(--s3);border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.bar-count{width:36px;font-size:11px;color:var(--text);text-align:right;flex-shrink:0}
+
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut-svg{flex-shrink:0}
+.donut-legend{display:flex;flex-direction:column;gap:10px}
+.dl-row{display:flex;align-items:center;gap:8px;font-size:11px}
+.dl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.dl-label{color:var(--muted2);flex:1}
+.dl-val{color:var(--text);font-weight:700}
+
+/* Recent scans */
+.scan-list{display:flex;flex-direction:column;gap:8px}
+.scan-item{
+  display:flex;align-items:center;gap:14px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:9px;padding:12px 16px;
+  transition:all .2s;cursor:pointer;
+}
+.scan-item:hover{border-color:var(--border2);transform:translateX(2px)}
+.scan-icon{font-size:20px;flex-shrink:0}
+.scan-info{flex:1;min-width:0}
+.scan-name{font-size:12px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.scan-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.risk-pill{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:100px;flex-shrink:0}
+.risk-pill.safe{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.25)}
+.risk-pill.caution{background:rgba(255,176,32,.1);color:var(--warn);border:1px solid rgba(255,176,32,.25)}
+.risk-pill.high{background:rgba(255,61,90,.1);color:var(--danger);border:1px solid rgba(255,61,90,.25)}
+.risk-pill.avoid{background:rgba(139,92,246,.1);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+
+/* ═══ ANALYZE PAGE ═══════════════════════════════════════ */
+.analyze-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+.mode-bar{display:flex;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:4px;gap:4px;margin-bottom:18px}
+.mode-btn{flex:1;padding:9px;border:none;background:none;color:var(--muted2);font-family:var(--fm);font-size:11px;cursor:pointer;border-radius:7px;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
+.mode-btn.active{background:var(--s3);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+
+.drop-zone{
+  border:2px dashed var(--border);border-radius:var(--r);
+  padding:40px 20px;text-align:center;cursor:pointer;
+  transition:all .3s;background:var(--s2);position:relative;
+  overflow:hidden;
+}
+.drop-zone:hover,.drop-zone.active-drop{border-color:var(--accent);background:rgba(0,212,255,.03)}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.dz-ico{font-size:44px;margin-bottom:12px;display:block}
+.dz-txt{font-size:12px;color:var(--muted2);line-height:1.7}
+.dz-txt strong{color:var(--text)}
+.dz-types{display:inline-block;margin-top:8px;font-size:9px;color:var(--muted);background:var(--s3);padding:3px 10px;border-radius:100px;border:1px solid var(--border);letter-spacing:1px}
+
+.field{margin-top:14px}
+.field label{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;display:block;margin-bottom:6px}
+select{width:100%;background:var(--s2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-family:var(--fm);font-size:12px;cursor:pointer;appearance:none}
+select:focus{outline:none;border-color:var(--accent)}
+
+.run-btn{
+  width:100%;margin-top:14px;
+  background:linear-gradient(135deg,var(--accent),var(--green));
+  color:#000;border:none;padding:14px;border-radius:var(--r);
+  font-family:var(--fh);font-size:12px;font-weight:700;cursor:pointer;
+  transition:all .2s;letter-spacing:.5px;position:relative;overflow:hidden;
+}
+.run-btn:hover{transform:translateY(-1px);box-shadow:0 8px 30px rgba(0,212,255,.25)}
+.run-btn:disabled{background:var(--s3);color:var(--muted);cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Preview */
+.preview-box{margin-top:14px;border-radius:9px;overflow:hidden;display:none;position:relative}
+.preview-box img,.preview-box video{width:100%;max-height:200px;object-fit:cover;display:block}
+.preview-label{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:8px 12px;font-size:10px;color:#aaa}
+
+/* Results panel */
+.results-area{min-height:300px;display:flex;flex-direction:column;gap:12px}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;text-align:center;color:var(--muted);gap:12px}
+.empty-state .e-ico{font-size:48px;opacity:.2}
+.empty-state p{font-size:12px;line-height:1.8;max-width:200px}
+
+/* Annotated image result */
+.result-img-wrap{border-radius:9px;overflow:hidden;position:relative;border:1px solid var(--border)}
+.result-img-wrap img{width:100%;display:block;max-height:240px;object-fit:cover}
+.result-overlay{position:absolute;inset:0}
+
+/* Detection list */
+.det-list{display:flex;flex-direction:column;gap:8px}
+.det-item{
+  display:flex;align-items:center;gap:10px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;
+  animation:rise .3s ease;
+}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.det-color{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.det-body{flex:1}
+.det-name{font-size:12px;font-weight:500}
+.det-meta{font-size:10px;color:var(--muted);margin-top:2px}
+.sev-tag{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:5px;flex-shrink:0}
+.sev-tag.LOW{background:rgba(0,229,160,.1);color:var(--green)}
+.sev-tag.MODERATE{background:rgba(255,176,32,.1);color:var(--warn)}
+.sev-tag.HIGH{background:rgba(255,61,90,.1);color:var(--danger)}
+
+/* Risk banner */
+.risk-banner{
+  border-radius:var(--r);padding:16px 20px;
+  display:flex;align-items:center;gap:16px;
+  border:1px solid;
+}
+.risk-banner.SAFE{background:rgba(0,229,160,.07);border-color:rgba(0,229,160,.25)}
+.risk-banner.CAUTION{background:rgba(255,176,32,.07);border-color:rgba(255,176,32,.25)}
+.risk-banner.HIGH{background:rgba(255,61,90,.07);border-color:rgba(255,61,90,.25)}
+.risk-banner.AVOID{background:rgba(139,92,246,.07);border-color:rgba(139,92,246,.25)}
+.rb-icon{font-size:28px}
+.rb-body{flex:1}
+.rb-title{font-family:var(--fh);font-size:13px;font-weight:700}
+.rb-title.SAFE{color:var(--green)}
+.rb-title.CAUTION{color:var(--warn)}
+.rb-title.HIGH{color:var(--danger)}
+.rb-title.AVOID{color:var(--purple)}
+.rb-sub{font-size:11px;color:var(--muted2);margin-top:3px}
+
+/* Severity meter */
+.sev-meter{margin-top:10px}
+.sm-row{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:5px}
+.sm-track{height:5px;background:var(--s3);border-radius:100px;overflow:hidden}
+.sm-fill{height:100%;border-radius:100px;background:linear-gradient(90deg,var(--green),var(--warn),var(--danger));transition:width 1s cubic-bezier(.4,0,.2,1);width:0}
+
+/* Voice btn */
+.voice-btn{
+  display:flex;align-items:center;gap:8px;
+  width:100%;background:var(--s2);border:1px solid var(--border);
+  color:var(--muted2);padding:10px 14px;border-radius:9px;
+  font-family:var(--fm);font-size:11px;cursor:pointer;
+  transition:all .2s;margin-top:4px;
+}
+.voice-btn:hover{border-color:var(--accent);color:var(--accent)}
+.voice-btn.speaking{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,.06)}
+.voice-wave{display:flex;align-items:center;gap:2px;height:16px}
+.voice-wave span{width:2px;background:var(--accent);border-radius:1px;animation:wave 1s ease-in-out infinite}
+.voice-wave span:nth-child(1){animation-delay:0s;height:4px}
+.voice-wave span:nth-child(2){animation-delay:.1s;height:10px}
+.voice-wave span:nth-child(3){animation-delay:.2s;height:16px}
+.voice-wave span:nth-child(4){animation-delay:.3s;height:10px}
+.voice-wave span:nth-child(5){animation-delay:.4s;height:4px}
+@keyframes wave{0%,100%{transform:scaleY(.4)}50%{transform:scaleY(1)}}
+
+/* Progress bar */
+.prog-wrap{display:none;margin-top:12px}
+.prog-hdr{display:flex;justify-content:space-between;font-size:10px;color:var(--muted2);margin-bottom:6px}
+.prog-track{height:5px;background:var(--s3);border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));border-radius:100px;width:0;transition:width .3s}
+.prog-status{font-size:10px;color:var(--muted);text-align:center;margin-top:6px}
+
+/* ═══ REPORT PAGE ════════════════════════════════════════ */
+.report-preview{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);padding:28px;
+  max-width:680px;margin:0 auto;
+  font-size:12px;line-height:1.8;
+}
+.rp-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.rp-logo{font-family:var(--fh);font-size:18px;font-weight:900;letter-spacing:-0.5px}
+.rp-logo span{color:var(--accent)}
+.rp-meta{text-align:right;font-size:10px;color:var(--muted)}
+.rp-section{margin-bottom:20px}
+.rp-section-title{font-family:var(--fh);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.rp-table{width:100%;border-collapse:collapse;font-size:11px}
+.rp-table th{text-align:left;color:var(--muted);font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--border)}
+.rp-table td{padding:8px 10px;border-bottom:1px solid var(--border)}
+.rp-table tr:last-child td{border:none}
+.rp-risk-box{
+  background:rgba(255,61,90,.07);border:1px solid rgba(255,61,90,.25);
+  border-radius:9px;padding:16px;display:flex;align-items:center;gap:14px;
+  margin-top:14px;
+}
+.rp-risk-icon{font-size:32px}
+.rp-risk-txt{flex:1}
+.rp-risk-main{font-family:var(--fh);font-size:15px;font-weight:700;color:var(--danger)}
+.rp-risk-sub{font-size:11px;color:var(--muted2);margin-top:3px}
+.dl-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;margin-top:20px;
+  background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);
+  color:var(--accent);padding:12px;border-radius:9px;
+  font-family:var(--fm);font-size:12px;cursor:pointer;
+  transition:all .2s;
+}
+.dl-btn:hover{background:rgba(0,212,255,.15)}
+
+/* ═══ LIVE PAGE ══════════════════════════════════════════ */
+.live-container{
+  background:var(--s1);border:1px solid var(--border);border-radius:var(--r);
+  padding:28px;text-align:center;
+}
+.live-feed{
+  background:#000;border-radius:9px;
+  aspect-ratio:16/9;max-height:360px;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:16px;position:relative;overflow:hidden;
+  border:1px solid var(--border);
+}
+.live-placeholder{color:var(--muted);font-size:13px}
+.live-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px;text-align:left}
+.live-stat{background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:14px}
+.ls-val{font-family:var(--fh);font-size:22px;font-weight:900;color:var(--accent)}
+.ls-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.live-start-btn{
+  background:linear-gradient(135deg,var(--danger),#FF6B35);
+  color:#fff;border:none;padding:12px 32px;border-radius:100px;
+  font-family:var(--fh);font-size:11px;font-weight:700;cursor:pointer;
+  transition:all .2s;letter-spacing:1px;
+}
+.live-start-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(255,61,90,.3)}
+
+/* ═══ ABOUT PAGE ═════════════════════════════════════════ */
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.about-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:22px}
+.ac-num{font-family:var(--fh);font-size:40px;font-weight:900;color:var(--accent);opacity:.3;margin-bottom:6px}
+.ac-title{font-family:var(--fh);font-size:13px;font-weight:700;margin-bottom:8px}
+.ac-desc{font-size:11px;color:var(--muted2);line-height:1.8}
+.team-row{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+.team-card{background:var(--s1);border:1px solid var(--border);border-radius:9px;padding:14px 18px;flex:1;min-width:160px}
+.tc-name{font-size:12px;font-weight:500}
+.tc-id{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ═══ SCANNING OVERLAY ═══════════════════════════════════ */
+.scan-overlay{
+  display:none;position:absolute;inset:0;
+  background:rgba(5,8,13,.92);border-radius:var(--r);
+  flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  z-index:20;
+}
+.scan-overlay.on{display:flex}
+.scan-ring{
+  width:64px;height:64px;border-radius:50%;
+  border:2px solid var(--s3);
+  border-top-color:var(--accent);
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-txt{font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+.scan-sub{font-size:10px;color:var(--muted)}
+
+/* ═══ CANVAS FOR FAKE ANNOTATIONS ═══════════════════════ */
+.annot-canvas{position:absolute;inset:0;pointer-events:none}
+
+/* ═══ SCROLLBAR ══════════════════════════════════════════ */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══ TOAST ══════════════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:20px;right:20px;z-index:100;
+  background:var(--s2);border:1px solid var(--border);
+  padding:10px 18px;border-radius:9px;font-size:11px;
+  transform:translateY(60px);opacity:0;transition:all .3s;
+  max-width:300px;
+}
+#toast.show{transform:none;opacity:1}
+#toast.ok{border-color:var(--green);color:var(--green)}
+#toast.info{border-color:var(--accent);color:var(--accent)}
+#toast.warn{border-color:var(--warn);color:var(--warn)}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+<!-- ════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">🛣</div>
+    <div class="logo-text">Road<span>Scan</span> AI</div>
+    <div class="logo-sub">v3.0 · SMIT AI&DS</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-item active" onclick="goPage('dashboard',this)">
+      <span class="nav-ico">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </div>
+    <div class="nav-item" onclick="goPage('analyze',this)">
+      <span class="nav-ico">🔬</span>
+      <span class="nav-label">Analyze</span>
+    </div>
+    <div class="nav-item" onclick="goPage('report',this)">
+      <span class="nav-ico">📄</span>
+      <span class="nav-label">Report</span>
+    </div>
+    <div class="nav-item" onclick="goPage('live',this)">
+      <span class="nav-ico">📡</span>
+      <span class="nav-label">Live Feed</span>
+      <span class="nav-badge">NEW</span>
+    </div>
+    <div class="nav-item" onclick="goPage('about',this)">
+      <span class="nav-ico">ℹ️</span>
+      <span class="nav-label">About</span>
+    </div>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="model-status">
+      <div class="ms-label">Model Status</div>
+      <div class="ms-row">
+        <div class="ms-dot"></div>
+        <div class="ms-name">YOLOv8n · ONNX</div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:6px">
+        CPU mode · ~320ms/frame
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════
+     MAIN CONTENT
+════════════════════════════════════════ -->
+<main class="main">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-title" id="page-title">Dashboard</div>
+    <div class="topbar-right">
+      <div class="chip demo">
+        <div class="c-dot"></div>
+        <span>Interactive Demo</span>
+      </div>
+      <div class="chip live">
+        <div class="c-dot"></div>
+        <span>System Ready</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ DASHBOARD PAGE ══════════════════════════════════ -->
+  <div id="page-dashboard" class="page active" style="animation:none">
+    <!-- Stats -->
+    <div class="stat-grid">
+      <div class="stat-card cyan">
+        <div class="sc-label">Total Inspections</div>
+        <div class="sc-val cyan" id="cnt-total">0</div>
+        <div class="sc-sub">All time scans</div>
+        <div class="sc-trend">↑ 12%</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="sc-label">High Risk Roads</div>
+        <div class="sc-val danger" id="cnt-high">0</div>
+        <div class="sc-sub">Immediate action needed</div>
+        <div class="sc-trend" style="color:var(--danger)">↑ 3</div>
+      </div>
+      <div class="stat-card warn">
+        <div class="sc-label">Moderate Damage</div>
+        <div class="sc-val warn" id="cnt-mod">0</div>
+        <div class="sc-sub">Monitor closely</div>
+        <div class="sc-trend" style="color:var(--warn)">↓ 5%</div>
+      </div>
+      <div class="stat-card green">
+        <div class="sc-label">Safe Roads</div>
+        <div class="sc-val green" id="cnt-safe">0</div>
+        <div class="sc-sub">No action needed</div>
+        <div class="sc-trend">↑ 8%</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div class="charts-row">
+      <div class="card">
+        <div class="card-title">Damage Type Breakdown</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <div class="bar-label">Pothole</div>
+            <div class="bar-track"><div class="bar-fill" style="background:#FF3D5A" data-w="82"></div></div>
+            <div class="bar-count">312</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Longitudinal Crack</div>
+            <div class="bar-track"><div class="bar-fill" style="background:#FF8800" data-w="64"></div></div>
+            <div class="bar-count">245</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Transverse Crack</div>
+            <div class="bar-track"><div class="bar-fill" style="background:#FFB020" data-w="52"></div></div>
+            <div class="bar-count">198</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Alligator Crack</div>
+            <div class="bar-track"><div class="bar-fill" style="background:#FF5500" data-w="41"></div></div>
+            <div class="bar-count">156</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Rutting</div>
+            <div class="bar-track"><div class="bar-fill" style="background:#8B5CF6" data-w="23"></div></div>
+            <div class="bar-count">89</div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label">Edge Crack</div>
+            <div class="bar-track"><div class="bar-fill" style="background:#00D4FF" data-w="18"></div></div>
+            <div class="bar-count">67</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Severity Distribution</div>
+        <div class="donut-wrap">
+          <svg class="donut-svg" width="130" height="130" viewBox="0 0 130 130">
+            <!-- Background ring -->
+            <circle cx="65" cy="65" r="50" fill="none" stroke="#1A2230" stroke-width="18"/>
+            <!-- HIGH (338) -->
+            <circle cx="65" cy="65" r="50" fill="none" stroke="#FF3D5A" stroke-width="18"
+              stroke-dasharray="133 181" stroke-dashoffset="0"
+              transform="rotate(-90 65 65)" stroke-linecap="round"/>
+            <!-- MODERATE (621) -->
+            <circle cx="65" cy="65" r="50" fill="none" stroke="#FFB020" stroke-width="18"
+              stroke-dasharray="245 69" stroke-dashoffset="-133"
+              transform="rotate(-90 65 65)" stroke-linecap="round"/>
+            <!-- LOW (523) -->
+            <circle cx="65" cy="65" r="50" fill="none" stroke="#00E5A0" stroke-width="18"
+              stroke-dasharray="207 107" stroke-dashoffset="-378"
+              transform="rotate(-90 65 65)" stroke-linecap="round"/>
+            <text x="65" y="61" text-anchor="middle" fill="#D8E4F0" font-size="14" font-family="Unbounded" font-weight="900">1,482</text>
+            <text x="65" y="76" text-anchor="middle" fill="#4A6080" font-size="9" font-family="DM Mono">total</text>
+          </svg>
+          <div class="donut-legend">
+            <div class="dl-row"><div class="dl-dot" style="background:var(--danger)"></div><span class="dl-label">High</span><span class="dl-val">338</span></div>
+            <div class="dl-row"><div class="dl-dot" style="background:var(--warn)"></div><span class="dl-label">Moderate</span><span class="dl-val">621</span></div>
+            <div class="dl-row"><div class="dl-dot" style="background:var(--green)"></div><span class="dl-label">Low</span><span class="dl-val">523</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent scans -->
+    <div class="card">
+      <div class="card-title">Recent Scans</div>
+      <div class="scan-list">
+        <div class="scan-item" onclick="goPage('analyze',document.querySelectorAll('.nav-item')[1])">
+          <div class="scan-icon">🎥</div>
+          <div class="scan-info">
+            <div class="scan-name">campus_road_main.mp4</div>
+            <div class="scan-meta">23 detections · 402 frames · 2 min 14 sec</div>
+          </div>
+          <span class="risk-pill high">High Risk</span>
+        </div>
+        <div class="scan-item">
+          <div class="scan-icon">🖼️</div>
+          <div class="scan-info">
+            <div class="scan-name">road_image_042.jpg</div>
+            <div class="scan-meta">3 detections · pothole + 2 cracks</div>
+          </div>
+          <span class="risk-pill caution">Caution</span>
+        </div>
+        <div class="scan-item">
+          <div class="scan-icon">🎥</div>
+          <div class="scan-info">
+            <div class="scan-name">highway_segment_B.mp4</div>
+            <div class="scan-meta">7 detections · 210 frames · 42 sec</div>
+          </div>
+          <span class="risk-pill caution">Caution</span>
+        </div>
+        <div class="scan-item">
+          <div class="scan-icon">🖼️</div>
+          <div class="scan-info">
+            <div class="scan-name">inspection_road_7.jpg</div>
+            <div class="scan-meta">0 significant detections</div>
+          </div>
+          <span class="risk-pill safe">Safe</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ANALYZE PAGE ════════════════════════════════════ -->
+  <div id="page-analyze" class="page">
+    <!-- Mode toggle -->
+    <div class="mode-bar">
+      <button class="mode-btn active" id="mb-img" onclick="setMode('image')">🖼️ Image</button>
+      <button class="mode-btn" id="mb-vid" onclick="setMode('video')">🎥 Video</button>
+    </div>
+
+    <div class="analyze-grid">
+      <!-- Left: Input -->
+      <div class="card" style="position:relative">
+        <div id="scan-overlay-el" class="scan-overlay">
+          <div class="scan-ring"></div>
+          <div class="scan-txt" id="scan-label">Analyzing...</div>
+          <div class="scan-sub" id="scan-sub">Running YOLOv8 detection</div>
+        </div>
+
+        <div class="card-title" id="input-card-title">Upload Road Image</div>
+
+        <!-- Drop zones -->
+        <div id="dz-image" class="drop-zone">
+          <input type="file" accept="image/*" onchange="handleFile(this,'image')">
+          <span class="dz-ico">🛣️</span>
+          <div class="dz-txt"><strong>Drop road image here</strong><br>or click to browse</div>
+          <div class="dz-types">JPG · PNG · WEBP</div>
+        </div>
+        <div id="dz-video" class="drop-zone" style="display:none">
+          <input type="file" accept="video/*" onchange="handleFile(this,'video')">
+          <span class="dz-ico">🎬</span>
+          <div class="dz-txt"><strong>Drop dashcam video here</strong><br>or click to browse</div>
+          <div class="dz-types">MP4 · AVI · MOV · WEBM</div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-box" id="prev-box">
+          <img id="prev-img" src="" alt="" style="display:none">
+          <video id="prev-vid" controls muted style="display:none"></video>
+          <div class="preview-label" id="prev-label"></div>
+        </div>
+
+        <!-- Video progress -->
+        <div class="prog-wrap" id="prog-wrap">
+          <div class="prog-hdr">
+            <span>Processing video frames...</span>
+            <span id="prog-pct">0%</span>
+          </div>
+          <div class="prog-track"><div class="prog-fill" id="prog-fill"></div></div>
+          <div class="prog-status" id="prog-status">Queued</div>
+        </div>
+
+        <!-- Vehicle select -->
+        <div class="field">
+          <label>Vehicle Type — for risk assessment</label>
+          <select id="vehicle-sel">
+            <option value="car">🚗 Car / Sedan</option>
+            <option value="truck">🚛 Truck / Heavy Vehicle</option>
+            <option value="bike">🏍️ Motorcycle / Bike</option>
+            <option value="bicycle">🚲 Bicycle</option>
+          </select>
+        </div>
+
+        <button class="run-btn" id="run-btn" onclick="runAnalysis()" disabled>
+          Analyze Road
+        </button>
+      </div>
+
+      <!-- Right: Results -->
+      <div class="card">
+        <div class="card-title">Detection Results</div>
+        <div class="results-area" id="results">
+          <div class="empty-state">
+            <div class="e-ico">🔬</div>
+            <p>Upload a road image or video and click <strong>Analyze Road</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ REPORT PAGE ════════════════════════════════════ -->
+  <div id="page-report" class="page">
+    <div class="report-preview">
+      <div class="rp-header">
+        <div>
+          <div class="rp-logo">Road<span>Scan</span> AI</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px">Road Surface Inspection Report</div>
+        </div>
+        <div class="rp-meta">
+          <div>Generated: 22 Feb 2026, 14:32</div>
+          <div style="margin-top:2px">Report ID: RS-2026-0142</div>
+          <div style="margin-top:2px;color:var(--accent)">SMIT, SMU AI&DS</div>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Video Summary</div>
+        <table class="rp-table">
+          <tr><td style="color:var(--muted)">File</td><td>campus_road_main.mp4</td></tr>
+          <tr><td style="color:var(--muted)">Duration</td><td>2 min 14 sec</td></tr>
+          <tr><td style="color:var(--muted)">Total Frames</td><td>3,350</td></tr>
+          <tr><td style="color:var(--muted)">Frames Analyzed</td><td>402 (every 5th frame)</td></tr>
+          <tr><td style="color:var(--muted)">Total Detections</td><td>23</td></tr>
+        </table>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Damage Breakdown</div>
+        <table class="rp-table">
+          <thead><tr><th>Damage Type</th><th>Count</th><th>Avg Severity</th><th>Max Confidence</th></tr></thead>
+          <tbody>
+            <tr><td>Pothole (D40)</td><td>8</td><td><span class="sev-tag HIGH">HIGH</span></td><td>94%</td></tr>
+            <tr><td>Alligator Crack (D20)</td><td>7</td><td><span class="sev-tag MODERATE">MODERATE</span></td><td>87%</td></tr>
+            <tr><td>Transverse Crack (D10)</td><td>5</td><td><span class="sev-tag LOW">LOW</span></td><td>76%</td></tr>
+            <tr><td>Longitudinal Crack (D00)</td><td>3</td><td><span class="sev-tag LOW">LOW</span></td><td>71%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Vehicle Risk Assessment</div>
+        <table class="rp-table">
+          <thead><tr><th>Vehicle Type</th><th>Risk Level</th><th>Recommendation</th></tr></thead>
+          <tbody>
+            <tr><td>Car / Sedan</td><td><span style="color:var(--danger)">HIGH RISK</span></td><td>Avoid this road segment</td></tr>
+            <tr><td>Motorcycle / Bike</td><td><span style="color:var(--danger)">HIGH RISK</span></td><td>Dangerous — do not pass</td></tr>
+            <tr><td>Truck / Heavy</td><td><span style="color:var(--warn)">CAUTION</span></td><td>Proceed at reduced speed</td></tr>
+            <tr><td>Bicycle</td><td><span style="color:var(--purple)">AVOID</span></td><td>Find alternative route</td></tr>
+          </tbody>
+        </table>
+        <div class="rp-risk-box">
+          <div class="rp-risk-icon">🔴</div>
+          <div class="rp-risk-txt">
+            <div class="rp-risk-main">Overall: HIGH SEVERITY</div>
+            <div class="rp-risk-sub">Immediate road maintenance required. 8 potholes detected with HIGH severity score of 0.84/1.0. Road should be closed to light vehicles pending repair.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Model Performance</div>
+        <table class="rp-table">
+          <tr><td style="color:var(--muted)">Model</td><td>YOLOv8n (ONNX)</td></tr>
+          <tr><td style="color:var(--muted)">mAP@50</td><td>0.71</td></tr>
+          <tr><td style="color:var(--muted)">Precision</td><td>0.74</td></tr>
+          <tr><td style="color:var(--muted)">Recall</td><td>0.68</td></tr>
+          <tr><td style="color:var(--muted)">Inference Speed</td><td>~320 ms/frame (CPU)</td></tr>
+          <tr><td style="color:var(--muted)">Training Dataset</td><td>RDD2022 — 34,711 images</td></tr>
+        </table>
+      </div>
+
+      <button class="dl-btn" onclick="toast('PDF report downloaded!','ok')">
+        ⬇ Download Full PDF Report
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ LIVE FEED PAGE ════════════════════════════════ -->
+  <div id="page-live" class="page">
+    <div class="live-container">
+      <div class="card-title" style="margin-bottom:16px">Live Road Feed — Webcam / Phone Camera</div>
+      <div class="live-feed" id="live-feed">
+        <div class="live-placeholder" id="live-ph">
+          <div style="font-size:48px;margin-bottom:12px">📡</div>
+          <div>Click Start to connect camera</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px">Point at any road surface</div>
+        </div>
+        <video id="live-video" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:9px" autoplay muted></video>
+        <canvas id="live-canvas" style="display:none;position:absolute;inset:0;border-radius:9px"></canvas>
+      </div>
+
+      <button class="live-start-btn" id="live-btn" onclick="toggleLive()">
+        ▶ Start Live Detection
+      </button>
+
+      <div class="live-grid">
+        <div class="live-stat">
+          <div class="ls-val" id="live-fps">—</div>
+          <div class="ls-lbl">FPS</div>
+        </div>
+        <div class="live-stat">
+          <div class="ls-val" id="live-det">0</div>
+          <div class="ls-lbl">Detections</div>
+        </div>
+        <div class="live-stat">
+          <div class="ls-val" id="live-risk" style="color:var(--green)">—</div>
+          <div class="ls-lbl">Current Risk</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ABOUT PAGE ════════════════════════════════════ -->
+  <div id="page-about" class="page">
+    <div class="about-grid">
+      <div class="about-card">
+        <div class="ac-num">01</div>
+        <div class="ac-title">Lightweight Detection</div>
+        <div class="ac-desc">YOLOv8n trained on RDD2022 — 47,420 road images from India, Japan, USA, Norway. 3M parameters, 6MB model. Runs on CPU at ~320ms/frame with no GPU required.</div>
+      </div>
+      <div class="about-card">
+        <div class="ac-num">02</div>
+        <div class="ac-title">Damage Classification + Severity</div>
+        <div class="ac-desc">Detects 4 RDD2022 damage classes: D00 (Longitudinal), D10 (Transverse), D20 (Alligator), D40 (Pothole). Severity scored LOW / MODERATE / HIGH based on area ratio, damage type weight, and detection density.</div>
+      </div>
+      <div class="about-card">
+        <div class="ac-num">03</div>
+        <div class="ac-title">Vehicle Risk Classification</div>
+        <div class="ac-desc">Rule-based system maps detected severity to vehicle-specific passability: SAFE, CAUTION, HIGH RISK, AVOID. Accounts for vehicle type (car, truck, motorcycle, bicycle) and road coverage percentage.</div>
+      </div>
+      <div class="about-card">
+        <div class="ac-num">04</div>
+        <div class="ac-title">Real Video Evaluation</div>
+        <div class="ac-desc">System processes dashcam video frame-by-frame. Results include annotated output video, damage frequency table, per-frame risk classification, and downloadable PDF inspection report.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Model Performance (RDD2022 Validation Set)</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:4px">
+        <div style="text-align:center">
+          <div style="font-family:var(--fh);font-size:28px;font-weight:900;color:var(--accent)">0.71</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:1px">mAP@50</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--fh);font-size:28px;font-weight:900;color:var(--green)">0.74</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Precision</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--fh);font-size:28px;font-weight:900;color:var(--warn)">0.68</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Recall</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:var(--fh);font-size:28px;font-weight:900;color:var(--purple)">6 MB</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:1px">Model Size</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Team — SMIT, SMU AI&DS</div>
+      <div class="team-row">
+        <div class="team-card"><div class="tc-name">Zainab Nayeem</div><div class="tc-id">Roll: 202300069</div></div>
+        <div class="team-card"><div class="tc-name">Udit Gogoi</div><div class="tc-id">Roll: 202300</div></div>
+        <div class="team-card"><div class="tc-name">Akash Chettri</div><div class="tc-id">Roll: 202300198</div></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div><!-- end .app -->
+
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ════════════════════════════════════════════════════════
+const PAGE_TITLES = {
+  dashboard:'Dashboard',
+  analyze:'Analyze Road',
+  report:'Inspection Report',
+  live:'Live Feed',
+  about:'About & Objectives'
+};
+
+function goPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[name];
+}
+
+// ════════════════════════════════════════════════════════
+// DASHBOARD COUNTERS
+// ════════════════════════════════════════════════════════
+function animateCount(el, target, duration=1500) {
+  let start = 0, step = target / (duration/16);
+  const iv = setInterval(() => {
+    start = Math.min(start + step, target);
+    el.textContent = Math.round(start).toLocaleString();
+    if (start >= target) clearInterval(iv);
+  }, 16);
+}
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    animateCount(document.getElementById('cnt-total'), 1482);
+    animateCount(document.getElementById('cnt-high'), 47);
+    animateCount(document.getElementById('cnt-mod'), 621);
+    animateCount(document.getElementById('cnt-safe'), 523);
+  }, 300);
+
+  // Animate bars
+  setTimeout(() => {
+    document.querySelectorAll('.bar-fill').forEach(b => {
+      b.style.width = b.dataset.w + '%';
+    });
+  }, 500);
+});
+
+// ════════════════════════════════════════════════════════
+// ANALYZE MODE TOGGLE
+// ════════════════════════════════════════════════════════
+let currentMode = 'image';
+let fileLoaded  = false;
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById('mb-img').classList.toggle('active', m==='image');
+  document.getElementById('mb-vid').classList.toggle('active', m==='video');
+  document.getElementById('dz-image').style.display = m==='image' ? '' : 'none';
+  document.getElementById('dz-video').style.display = m==='video' ? '' : 'none';
+  document.getElementById('input-card-title').textContent =
+    m==='image' ? 'Upload Road Image' : 'Upload Road Video';
+  document.getElementById('run-btn').textContent =
+    m==='image' ? 'Analyze Image' : 'Analyze Video';
+  fileLoaded = false;
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('prev-box').style.display = 'none';
+  document.getElementById('prog-wrap').style.display = 'none';
+  resetResults();
+}
+
+// Store file references globally so analyze functions can access them directly
+let _imageB64  = null;   // base64 string of selected image (no prefix)
+let _videoFile = null;   // raw File object of selected video
+
+function handleFile(input, type) {
+  const f = input.files[0]; if (!f) return;
+  const box = document.getElementById('prev-box');
+  box.style.display = 'block';
+
+  if (type === 'image') {
+    const r = new FileReader();
+    r.onload = ev => {
+      // Store base64 WITHOUT the data:...;base64, prefix
+      _imageB64 = ev.target.result.split(',')[1];
+      _videoFile = null;
+
+      const img = document.getElementById('prev-img');
+      img.src = ev.target.result;
+      img.style.display = 'block';
+      document.getElementById('prev-vid').style.display = 'none';
+      document.getElementById('prev-label').textContent = '📷 ' + f.name;
+      fileLoaded = true;
+      document.getElementById('run-btn').disabled = false;
+      document.getElementById('run-btn').textContent = 'Analyze Image';
+    };
+    r.readAsDataURL(f);
+  } else {
+    // Store raw file for FormData upload
+    _videoFile = f;
+    _imageB64  = null;
+
+    const vid = document.getElementById('prev-vid');
+    vid.src = URL.createObjectURL(f);
+    vid.style.display = 'block';
+    document.getElementById('prev-img').style.display = 'none';
+    document.getElementById('prev-label').textContent = '🎥 ' + f.name + ' · ' + (f.size/1e6).toFixed(1) + ' MB';
+    fileLoaded = true;
+    document.getElementById('run-btn').disabled = false;
+    document.getElementById('run-btn').textContent = 'Analyze Video';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// REAL API CALLS TO FLASK BACKEND
+// ════════════════════════════════════════════════════════
+const API = 'http://localhost:5000';
+
+const RISK_INFO = {
+  'HIGH RISK':  {icon:'🔴', cls:'HIGH',    sub:'This road is dangerous. Avoid if possible.'},
+  'CAUTION':    {icon:'🟡', cls:'CAUTION', sub:'Proceed slowly. Damage present on road surface.'},
+  'SAFE':       {icon:'🟢', cls:'SAFE',    sub:'Road condition acceptable. Normal speed is fine.'},
+  'AVOID':      {icon:'🚫', cls:'AVOID',   sub:'Unsafe for this vehicle type. Find alternative route.'},
+  'NONE':       {icon:'🟢', cls:'SAFE',    sub:'No significant damage detected.'},
+};
+
+const CLASS_COLORS = {
+  'Pothole':           '#FF3D5A',
+  'Alligator Crack':   '#FF5500',
+  'Transverse Crack':  '#FFB020',
+  'Longitudinal Crack':'#FF8800',
+};
+
+async function runAnalysis() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  try {
+    if (currentMode === 'image') await runImageReal();
+    else                          await runVideoReal();
+  } catch(e) {
+    toast('Backend error: ' + e.message, 'warn');
+    resetResults();
+  }
+  btn.disabled = false;
+}
+
+// ── IMAGE ─────────────────────────────────────────────────
+async function runImageReal() {
+  const ov = document.getElementById('scan-overlay-el');
+  ov.classList.add('on');
+  document.getElementById('scan-label').textContent = 'Running YOLOv8...';
+  document.getElementById('scan-sub').textContent   = 'Detecting road damage';
+
+  const vehicle = document.getElementById('vehicle-sel').value;
+
+  // Use _imageB64 stored directly when file was selected
+  if (!_imageB64) {
+    ov.classList.remove('on');
+    toast('Please upload a road image first', 'warn');
+    document.getElementById('run-btn').disabled = false;
+    return;
+  }
+
+  try {
+    document.getElementById('scan-label').textContent = 'Calling backend...';
+    const resp = await fetch(API + '/analyze/image', {
+      method : 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body   : JSON.stringify({image: _imageB64, vehicle: vehicle}),
+    });
+    if (!resp.ok) throw new Error('Backend error ' + resp.status);
+    const data = await resp.json();
+    ov.classList.remove('on');
+    if (data.error) { toast('Error: ' + data.error, 'warn'); return; }
+    renderImageResults(data, vehicle);
+  } catch(e) {
+    ov.classList.remove('on');
+    toast('Cannot reach backend — is it running? ' + e.message, 'warn');
+    console.error(e);
+  }
+}
+
+function renderImageResults(data, vehicle) {
+  const risk     = data.risk_summary?.vehicle_risk || 'SAFE';
+  const riskInfo = RISK_INFO[risk] || RISK_INFO['SAFE'];
+  const score    = data.risk_summary?.overall_score || 0;
+  const dets     = data.detections || [];
+
+  const imgHTML = data.annotated_image ? `
+    <div class="result-img-wrap" style="margin-bottom:10px">
+      <img src="data:image/jpeg;base64,${data.annotated_image}" alt="annotated">
+    </div>` : '';
+
+  const detHTML = dets.map((d,i) => `
+    <div class="det-item" style="animation-delay:${i*0.08}s">
+      <div class="det-color" style="background:${d.color||CLASS_COLORS[d.class_name]||'#888'}"></div>
+      <div class="det-body">
+        <div class="det-name">${d.class_name}</div>
+        <div class="det-meta">Confidence: ${Math.round(d.confidence*100)}%
+          · Score: ${d.severity?.score?.toFixed(2)||'—'}</div>
+      </div>
+      <div class="sev-tag ${d.severity?.level||'LOW'}">${d.severity?.level||'LOW'}</div>
+    </div>`).join('');
+
+  const riskBanner = `
+    <div class="risk-banner ${riskInfo.cls}">
+      <div class="rb-icon">${riskInfo.icon}</div>
+      <div class="rb-body">
+        <div class="rb-title ${riskInfo.cls}">${risk}</div>
+        <div class="rb-sub">${riskInfo.sub}</div>
+      </div>
+    </div>`;
+
+  const meterHTML = `
+    <div class="sev-meter">
+      <div class="sm-row">
+        <span>Severity Score</span>
+        <span>${Math.round(score*100)}%</span>
+      </div>
+      <div class="sm-track">
+        <div class="sm-fill" id="sm-fill"></div>
+      </div>
+    </div>`;
+
+  const infoHTML = `
+    <div style="font-size:10px;color:var(--muted);text-align:right;margin-top:4px">
+      Processed in ${data.processing_ms||'—'}ms on CPU
+    </div>`;
+
+  const voiceHTML = `
+    <button class="voice-btn" id="voice-btn" onclick="speakResults(${JSON.stringify(data).replace(/"/g,'&quot;')})">
+      🔊 Read Results Aloud
+    </button>`;
+
+  document.getElementById('results').innerHTML =
+    imgHTML + riskBanner + meterHTML + infoHTML +
+    `<div class="det-list" style="margin-top:10px">${detHTML||'<div style="color:var(--muted);font-size:12px;padding:10px">No damage detected — road appears in good condition ✅</div>'}</div>` +
+    voiceHTML;
+
+  setTimeout(()=>{
+    const f = document.getElementById('sm-fill');
+    if (f) f.style.width = (score*100)+'%';
+  },100);
+
+  toast(`✅ Done — ${dets.length} damage${dets.length!==1?'s':''} detected`, 'ok');
+}
+
+// ── VIDEO ─────────────────────────────────────────────────
+let _currentJobId = null;
+
+async function runVideoReal() {
+  const vehicle = document.getElementById('vehicle-sel').value;
+  const prog    = document.getElementById('prog-wrap');
+  prog.style.display = 'block';
+
+  // Use _videoFile stored directly when file was selected
+  if (!_videoFile) {
+    toast('Please upload a road video first', 'warn');
+    prog.style.display = 'none';
+    document.getElementById('run-btn').disabled = false;
+    return;
+  }
+
+  try {
+    document.getElementById('prog-status').textContent = 'Uploading video...';
+    const form = new FormData();
+    form.append('video', _videoFile);
+    form.append('vehicle', vehicle);
+
+    const resp = await fetch(API + '/analyze/video', {method:'POST', body:form});
+    if (!resp.ok) throw new Error('Upload failed ' + resp.status);
+    const {job_id} = await resp.json();
+    _currentJobId = job_id;
+
+    // Poll for progress every second
+    while (true) {
+      await sleep(1000);
+      const jr    = await fetch(API + '/jobs/' + job_id);
+      const jdata = await jr.json();
+
+      document.getElementById('prog-fill').style.width = jdata.progress + '%';
+      document.getElementById('prog-pct').textContent  = Math.round(jdata.progress) + '%';
+      document.getElementById('prog-status').textContent =
+        jdata.progress < 30 ? 'Extracting frames...' :
+        jdata.progress < 70 ? 'Running YOLOv8 detection...' :
+        jdata.progress < 95 ? 'Classifying severity...' : 'Finalizing...';
+
+      if (jdata.status === 'done')  { renderVideoResults(jdata.result, job_id, vehicle); break; }
+      if (jdata.status === 'error') { toast('Video failed: ' + jdata.error, 'warn'); break; }
+    }
+  } catch(e) {
+    toast('Cannot reach backend: ' + e.message, 'warn');
+    console.error(e);
+  }
+}
+
+async function runVideoDemo() {
+  // Fallback simulation when no file uploaded
+  for (let p=0; p<=100; p+=Math.random()*7+2) {
+    const pct = Math.min(Math.round(p),100);
+    document.getElementById('prog-fill').style.width = pct+'%';
+    document.getElementById('prog-pct').textContent  = pct+'%';
+    document.getElementById('prog-status').textContent =
+      pct<30?'⚙️ Extracting frames...':pct<70?'🔬 Running detection...':
+      pct<95?'📊 Classifying severity...':'✅ Finalizing...';
+    await sleep(100);
+  }
+  renderVideoResults({
+    risk_summary:{overall_severity:'HIGH',overall_score:.74,
+                  vehicle_risk:'HIGH RISK',damage_count:23,
+                  total_frames:402,processed_frames:80,
+                  video_fps:25,video_duration_s:16},
+    damage_frequency:{'Pothole':8,'Alligator Crack':7,
+                      'Transverse Crack':5,'Longitudinal Crack':3},
+    total_detections:23,
+  }, null, document.getElementById('vehicle-sel').value);
+}
+
+function renderVideoResults(result, jobId, vehicle) {
+  const risk     = result.risk_summary?.vehicle_risk || 'SAFE';
+  const riskInfo = RISK_INFO[risk] || RISK_INFO['SAFE'];
+  const freq     = result.damage_frequency || {};
+  const maxFreq  = Math.max(...Object.values(freq),1);
+
+  const freqHTML = Object.keys(freq).length ? `
+    <div style="margin-bottom:14px">
+      <div class="card-title" style="margin-bottom:10px">Damage Frequency</div>
+      ${Object.entries(freq).sort((a,b)=>b[1]-a[1]).map(([n,c])=>`
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:11px">
+          <div style="width:130px;color:var(--muted2)">${n}</div>
+          <div style="flex:1;height:6px;background:var(--s3);border-radius:100px;overflow:hidden">
+            <div style="height:100%;width:${Math.round(c/maxFreq*100)}%;
+                        background:${CLASS_COLORS[n]||'#888'};border-radius:100px;
+                        transition:width .8s"></div>
+          </div>
+          <div style="width:24px;text-align:right;color:var(--text)">${c}</div>
+        </div>`).join('')}
+    </div>` : '';
+
+  const rs = result.risk_summary || {};
+  const statsHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;font-size:11px">
+      ${[
+        ['Duration',        rs.video_duration_s ? rs.video_duration_s+'s' : '—'],
+        ['Total Detections', result.total_detections || 0],
+        ['Frames Analyzed',  rs.processed_frames || '—'],
+        ['Video FPS',        rs.video_fps?.toFixed(1) || '—'],
+      ].map(([l,v])=>`
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:10px">
+          <div style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:1px">${l}</div>
+          <div style="font-weight:700;margin-top:3px">${v}</div>
+        </div>`).join('')}
+    </div>`;
+
+  const riskBanner = `
+    <div class="risk-banner ${riskInfo.cls}" style="margin-bottom:12px">
+      <div class="rb-icon">${riskInfo.icon}</div>
+      <div class="rb-body">
+        <div class="rb-title ${riskInfo.cls}">${risk}</div>
+        <div class="rb-sub">${riskInfo.sub}</div>
+      </div>
+    </div>`;
+
+  const dlBtn = jobId ? `
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <a href="${API}/jobs/${jobId}/download"
+         style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;
+                background:var(--s2);border:1px solid var(--border);color:var(--text);
+                padding:9px;border-radius:8px;font-family:var(--fm);font-size:11px;
+                text-decoration:none;transition:all .2s"
+         onmouseover="this.style.borderColor='var(--green)'"
+         onmouseout="this.style.borderColor='var(--border)'">
+        ⬇ Download Annotated Video
+      </a>
+    </div>` : '';
+
+  const voiceHTML = `
+    <button class="voice-btn" id="voice-btn" style="margin-top:10px"
+      onclick="speakVideoResults(${JSON.stringify(result).replace(/"/g,'&quot;')})">
+      🔊 Read Results Aloud
+    </button>`;
+
+  document.getElementById('results').innerHTML =
+    riskBanner + freqHTML + statsHTML + dlBtn + voiceHTML;
+
+  toast(`✅ Video done — ${result.total_detections||0} detections`, 'ok');
+}
+
+function resetResults() {
+  document.getElementById('results').innerHTML = `
+    <div class="empty-state">
+      <div class="e-ico">🔬</div>
+      <p>Upload a road image or video and click <strong>Analyze Road</strong></p>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// VOICE ASSISTANT
+// ════════════════════════════════════════════════════════
+function _speak(text) {
+  if (!window.speechSynthesis) { toast("Voice not supported","warn"); return; }
+  window.speechSynthesis.cancel();
+  const btn = document.getElementById("voice-btn");
+  if (btn) { btn.classList.add("speaking"); btn.innerHTML = "<div class=voice-wave><span></span><span></span><span></span><span></span><span></span></div> Speaking..."; }
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 0.92; utt.pitch = 1.0;
+  utt.onend = () => { if (btn) { btn.classList.remove("speaking"); btn.innerHTML = "🔊 Read Results Aloud"; } };
+  window.speechSynthesis.speak(utt);
+}
+function speakResults(data) {
+  const dets=data.detections||[]; const risk=data.risk_summary||{};
+  const vRisk=risk.vehicle_risk||"unknown"; const sev=risk.overall_severity||"LOW";
+  const vehicle=risk.vehicle_type||"vehicle";
+  const counts={}; dets.forEach(d=>counts[d.class_name]=(counts[d.class_name]||0)+1);
+  const dmgParts=Object.entries(counts).map(([n,c])=>c+" "+n).join(", ");
+  const text=dets.length===0?"Analysis complete. No significant road damage detected. Road is safe."
+    :"Analysis complete. "+dets.length+" road damage"+(dets.length>1?"s":"")+" detected. "+dmgParts+". Overall severity is "+sev+". Risk for "+vehicle+": "+vRisk+".";
+  _speak(text);
+}
+function speakVideoResults(result) {
+  const rs=result.risk_summary||{}; const freq=result.damage_frequency||{};
+  const vRisk=rs.vehicle_risk||"unknown"; const sev=rs.overall_severity||"LOW";
+  const vehicle=rs.vehicle_type||"vehicle"; const total=result.total_detections||0;
+  const duration=rs.video_duration_s||0;
+  const dmgParts=Object.entries(freq).sort((a,b)=>b[1]-a[1]).map(([n,c])=>c+" "+n.toLowerCase()).join(", ");
+  const text=total===0?"Video analysis complete. No road damage detected across "+duration+" seconds. Road appears safe."
+    :"Video analysis complete. "+total+" damage"+(total>1?"s":"")+" detected across "+duration+" seconds. "+dmgParts+". Overall severity: "+sev+". Risk for "+vehicle+": "+vRisk+".";
+  _speak(text);
+}
+
+// ════════════════════════════════════════════════════════
+// LIVE FEED
+// ════════════════════════════════════════════════════════
+let liveActive = false, liveStream = null, liveDets = 0;
+
+async function toggleLive() {
+  const btn = document.getElementById('live-btn');
+  if (!liveActive) {
+    try {
+      liveStream = await navigator.mediaDevices.getUserMedia({video:true});
+      const vid = document.getElementById('live-video');
+      vid.srcObject = liveStream; vid.style.display = 'block';
+      document.getElementById('live-ph').style.display = 'none';
+      liveActive = true;
+      btn.textContent = '⏹ Stop Detection';
+      btn.style.background = 'linear-gradient(135deg,#444,#222)';
+      simulateLive();
+      toast('📡 Live detection started','info');
+    } catch(e) {
+      toast('Camera access denied — check browser permissions','warn');
+    }
+  } else {
+    if (liveStream) liveStream.getTracks().forEach(t=>t.stop());
+    document.getElementById('live-video').style.display = 'none';
+    document.getElementById('live-ph').style.display = '';
+    liveActive = false; liveDets = 0;
+    btn.textContent = '▶ Start Live Detection';
+    btn.style.background = 'linear-gradient(135deg,var(--danger),#FF6B35)';
+    document.getElementById('live-fps').textContent = '—';
+    document.getElementById('live-det').textContent = '0';
+    document.getElementById('live-risk').textContent = '—';
+    document.getElementById('live-risk').style.color = 'var(--green)';
+    toast('⏹ Live feed stopped','info');
+  }
+}
+
+function simulateLive() {
+  if (!liveActive) return;
+  const fps = (2.8 + Math.random()*.4).toFixed(1);
+  const newDets = Math.random() > .6 ? Math.floor(Math.random()*3)+1 : 0;
+  liveDets += newDets;
+  const risk = liveDets > 5 ? 'HIGH' : liveDets > 2 ? 'MED' : 'LOW';
+  const riskCol = {HIGH:'var(--danger)',MED:'var(--warn)',LOW:'var(--green)'}[risk];
+
+  document.getElementById('live-fps').textContent = fps;
+  document.getElementById('live-det').textContent = liveDets;
+  document.getElementById('live-risk').textContent = risk;
+  document.getElementById('live-risk').style.color = riskCol;
+
+  setTimeout(() => simulateLive(), 800 + Math.random()*400);
+}
+
+// ════════════════════════════════════════════════════════
+// DEMO — enable analyze without file upload
+// ════════════════════════════════════════════════════════
+// Allow clicking Analyze even without file for demo purposes
+document.addEventListener('DOMContentLoaded', () => {
+  _imageB64  = null;
+  _videoFile = null;
+  document.getElementById('run-btn').disabled = true;
+  document.getElementById('run-btn').textContent = 'Upload a file to analyze';
+});
+
+// ════════════════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════════════════
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show '+(type||'');
+  setTimeout(() => t.className = '', 3500);
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
