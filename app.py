@@ -181,7 +181,7 @@ def static_files(filename):
     return send_from_directory(str(FRONT_DIR), filename)
 
 # ── Image detection ────────────────────────────────────────────────────────
-@app.route("/detect", methods=["POST"])
+@app.route("/analyze/image", methods=["POST"])
 def detect():
     try:
         data     = request.get_json()
