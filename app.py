@@ -83,7 +83,7 @@ def preprocess(img: Image.Image, size=640):
     arr = np.array(img_rgb, dtype=np.float32) / 255.0
     return arr.transpose(2, 0, 1)[np.newaxis]
 
-def postprocess(output, orig_w, orig_h, conf_thresh=0.25, iou_thresh=0.45):
+def postprocess(output, orig_w, orig_h, conf_thresh=0.15, iou_thresh=0.45):
     preds = output[0]
     if preds.ndim == 3:
         preds = preds[0]
@@ -230,7 +230,7 @@ def detect():
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ── Video job endpoints ────────────────────────────────────────────────────
-@app.route("/video/upload", methods=["POST"])
+@app.route("/analyze/video", methods=["POST"])
 def video_upload():
     try:
         f      = request.files["video"]
